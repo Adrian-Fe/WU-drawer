@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WU EUR/ARS Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    body { font-family: -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; }
+    .card { background: #1e293b; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+    h1 { font-size: 1.2rem; color: #94a3b8; }
+    .latest { font-size: 2.2rem; font-weight: bold; color: #38bdf8; margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Western Union EUR / ARS</h1>
+    <div class="latest" id="rate">Lade...</div>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <script>
+    fetch('rates.csv')
+      .then(res => res.text())
+      .then(csv => {
+        const data = Papa.parse(csv, { header: true }).data.filter(r => r.exchange_rate && r.exchange_rate !== 'N/A');
+        const labels = data.map(r => r.timestamp_utc.slice(5, 16));
+        const values = data.map(r => parseFloat(r.exchange_rate));
+        
+        document.getElementById('rate').innerText = values[values.length - 1].toFixed(2) + ' ARS';
+
+        new Chart(document.getElementById('chart'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{ label: 'EUR / ARS', data: values, borderColor: '#38bdf8', tension: 0.2 }]
+          },
+          options: { scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
+        });
+      });
+  </script>
+</body>
+</html>
