@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WU EUR/ARS Tracker</title>
+    <title>WU Multi-Currency Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <style>
@@ -28,7 +28,6 @@
             min-height: 100vh;
         }
 
-        /* Glassmorphism Container */
         .glass-panel {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -38,109 +37,73 @@
             padding: 20px;
         }
 
-        /* Header */
         header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 10px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
         }
-        
         h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
         .credits { font-size: 0.85rem; color: var(--text-muted); opacity: 0.8; }
 
-        /* Controls (Menu) */
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+        .bot-status {
+            text-align: right; background: rgba(255,209,0,0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,209,0,0.3);
         }
+
+        .controls-wrapper { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; justify-content: space-between; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .currency-controls button { font-weight: bold; }
 
         button {
-            background: transparent;
-            color: var(--text-muted);
-            border: 1px solid var(--glass-border);
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
+            background: transparent; color: var(--text-muted); border: 1px solid var(--glass-border);
+            padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem;
         }
-
         button:hover { background: rgba(255, 255, 255, 0.08); color: var(--text-main); }
         button.active { border-color: var(--wu-yellow); color: var(--wu-yellow); }
 
-        .date-picker-group {
-            display: none;
-            align-items: center;
-            gap: 10px;
-        }
+        .date-picker-group { display: none; align-items: center; gap: 10px; }
         .date-picker-group.show { display: flex; }
         input[type="date"] {
-            background: rgba(0, 0, 0, 0.3);
-            color: var(--text-main);
-            border: 1px solid var(--glass-border);
-            padding: 7px;
-            border-radius: 6px;
-            color-scheme: dark;
+            background: rgba(0, 0, 0, 0.3); color: var(--text-main); border: 1px solid var(--glass-border); padding: 7px; border-radius: 6px; color-scheme: dark;
         }
 
-        /* Main Layout */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 20px;
-            align-items: start;
+        .dashboard { 
+            display: grid; 
+            grid-template-columns: 350px 1fr; 
+            gap: 20px; 
+            align-items: start; 
         }
-
-        /* Mobile Layout */
-        @media (max-width: 850px) {
+        
+        @media (max-width: 900px) {
             .dashboard { grid-template-columns: 1fr; }
-            .list-container { order: 2; /* Liste unter den Chart auf Handys */ }
+            .list-container { order: 2; }
             .chart-container { order: 1; }
         }
 
-        /* List Styles */
-        .list-container {
-            max-height: 500px;
-            overflow-y: auto;
-            padding-right: 10px;
-        }
-        
+        .list-container { max-height: 500px; overflow-y: auto; padding-right: 10px; }
         .list-container::-webkit-scrollbar { width: 6px; }
         .list-container::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
 
         .list-item {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background 0.3s ease;
-            border-radius: 8px;
-            margin-bottom: 4px;
+            padding: 12px 16px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;
+            transition: background 0.3s ease; border-radius: 8px; margin-bottom: 4px;
         }
-        
         .list-item:last-child { border-bottom: none; }
         .list-item.highlight { background: rgba(255, 209, 0, 0.15); border: 1px solid rgba(255, 209, 0, 0.3); }
 
         .item-left { display: flex; flex-direction: column; gap: 4px; }
         .item-date { font-size: 0.85rem; color: var(--text-muted); }
         .item-rate { font-size: 1.1rem; font-weight: 600; }
+        .item-ib { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
         
-        .item-delta { font-size: 0.85rem; font-weight: 500; text-align: right; }
+        .item-right { text-align: right; }
+        .item-delta { font-size: 0.85rem; font-weight: 500; }
         .delta-up { color: var(--green); }
         .delta-down { color: var(--red); }
         .delta-neutral { color: var(--text-muted); }
 
-        /* Chart */
-        .chart-container {
-            position: relative;
-            height: 500px;
-            width: 100%;
+        .chart-container { 
+            position: relative; 
+            height: 500px; 
+            width: 100%; 
+            min-width: 0; /* DAS BEHEBT DEN VERSTECKTEN CSS-GRID SCALING BUG! */
         }
     </style>
 </head>
@@ -148,163 +111,157 @@
 
     <header>
         <div>
-            <h1>Western Union EUR/ARS</h1>
+            <h1>Western Union Tracker</h1>
             <div class="credits">made by Adrian / for @all</div>
         </div>
-        
-        <!-- Der kleine Update-Bot -->
-        <div style="text-align: right; background: rgba(255,209,0,0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,209,0,0.3);">
-            <div style="font-size: 0.8rem; color: var(--wu-yellow); font-weight: bold;">🤖 Version: 1.1</div>
+        <div class="bot-status">
+            <div style="font-size: 0.8rem; color: var(--wu-yellow); font-weight: bold;">🤖 Version: 2.1 (Fix & Multi)</div>
             <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 3px;">
                 Code Update: <span id="html-update-time">lädt...</span>
             </div>
         </div>
     </header>
 
-    <div class="controls glass-panel">
-        <button onclick="setFilter('7')" id="btn-7">7 Tage</button>
-        <button onclick="setFilter('30')" id="btn-30">30 Tage</button>
-        <button onclick="setFilter('90')" id="btn-90" class="active">90 Tage</button>
-        <button onclick="setFilter('all')" id="btn-all">Alle Daten</button>
-        <button onclick="toggleCustomDate()" id="btn-custom">Zeitraum...</button>
-        
-        <div class="date-picker-group" id="date-pickers">
-            <input type="date" id="date-start" onchange="applyCustomDate()">
-            <span style="color:var(--text-muted)">bis</span>
-            <input type="date" id="date-end" onchange="applyCustomDate()">
+    <div class="controls-wrapper">
+        <div class="controls currency-controls glass-panel" style="padding: 10px;">
+            <button onclick="setCurrency('EUR')" id="curr-EUR" class="active">EUR / ARS</button>
+            <button onclick="setCurrency('USD')" id="curr-USD">USD / ARS</button>
+            <button onclick="setCurrency('GBP')" id="curr-GBP">GBP / ARS</button>
+            <button onclick="setCurrency('CAD')" id="curr-CAD">CAD / ARS</button>
+        </div>
+
+        <div class="controls glass-panel" style="padding: 10px;">
+            <button onclick="setTimeFilter('7')" id="btn-7">7 Tage</button>
+            <button onclick="setTimeFilter('30')" id="btn-30">30 Tage</button>
+            <button onclick="setTimeFilter('90')" id="btn-90" class="active">90 Tage</button>
+            <button onclick="setTimeFilter('all')" id="btn-all">Alle</button>
+            <button onclick="toggleCustomDate()" id="btn-custom">Zeitraum...</button>
+            
+            <div class="date-picker-group" id="date-pickers">
+                <input type="date" id="date-start" onchange="applyFilters()">
+                <span style="color:var(--text-muted)">bis</span>
+                <input type="date" id="date-end" onchange="applyFilters()">
+            </div>
         </div>
     </div>
 
     <div class="dashboard">
-        <!-- Linke Seite: Liste -->
-        <div class="list-container glass-panel" id="rate-list">
-            <!-- Wird per JS gefüllt -->
-        </div>
-
-        <!-- Rechte Seite: Graph -->
-        <div class="chart-container glass-panel">
-            <canvas id="rateChart"></canvas>
-        </div>
+        <div class="list-container glass-panel" id="rate-list"></div>
+        <div class="chart-container glass-panel"><canvas id="rateChart"></canvas></div>
     </div>
 
     <script>
-        let allData = [];
+        let fullData = [];
         let chartInstance = null;
+        let currentCurrency = 'EUR';
+        let currentTimeFilter = '90';
 
-        // Bot: Fragt bei GitHub nach, wann die index.html zuletzt aktualisiert wurde
+        // Update Bot Fetch
         fetch('https://api.github.com/repos/Adrian-Fe/WU-drawer/commits?path=index.html&page=1&per_page=1')
             .then(res => res.json())
             .then(data => {
                 if (data && data.length > 0) {
                     const commitDate = new Date(data[0].commit.author.date);
-                    const formattedDate = commitDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
-                    document.getElementById('html-update-time').innerText = formattedDate + ' Uhr';
+                    document.getElementById('html-update-time').innerText = commitDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' Uhr';
                 }
-            })
-            .catch(() => {
-                document.getElementById('html-update-time').innerText = 'Offline';
-            });
+            }).catch(() => document.getElementById('html-update-time').innerText = 'Offline');
 
-        // 1. Daten laden (Das '?v=...' zwingt den Browser, den Cache zu ignorieren!)
+        // CSV Fetch
         fetch('rates.csv?v=' + new Date().getTime())
             .then(res => res.text())
             .then(csv => {
                 const parsed = Papa.parse(csv, { header: true }).data;
-                // Nur gültige Datenreihen behalten
-                allData = parsed.filter(r => r.exchange_rate && r.exchange_rate !== 'N/A' && r.timestamp_utc);
                 
-                // Datumsobjekte erzeugen und Kurs als Zahl speichern
-                allData.forEach(r => {
-                    r.dateObj = new Date(r.timestamp_utc.replace(" UTC", "Z"));
-                    r.rateNum = parseFloat(r.exchange_rate);
-                    r.id = r.timestamp_utc.replace(/[^a-zA-Z0-9]/g, ""); // ID für Hover-Sync
+                fullData = parsed.filter(r => r.exchange_rate && r.exchange_rate !== 'N/A' && r.timestamp_utc).map(r => {
+                    // FIX: Ersetzt Leerzeichen mit 'T', damit Safari nicht kaputtgeht
+                    const isoDate = r.timestamp_utc.replace(" ", "T").replace(" UTC", "Z");
+                    const dateObj = new Date(isoDate);
+                    const wuRate = parseFloat(r.exchange_rate);
+                    
+                    let ibRate = r.interbank_rate && r.interbank_rate !== 'N/A' ? parseFloat(r.interbank_rate) : (wuRate / 1.06);
+                    const currency = r.send_currency || 'EUR';
+
+                    return {
+                        id: r.timestamp_utc.replace(/[^a-zA-Z0-9]/g, "") + currency,
+                        dateObj: dateObj,
+                        currency: currency,
+                        wuRate: wuRate,
+                        ibRate: ibRate
+                    };
                 });
 
-                // Chronologisch sortieren (alt -> neu)
-                allData.sort((a, b) => a.dateObj - b.dateObj);
-
-                // Deltas berechnen
-                for(let i = 0; i < allData.length; i++) {
-                    if (i === 0) {
-                        allData[i].delta = 0;
-                        allData[i].deltaPct = 0;
-                    } else {
-                        const prev = allData[i-1].rateNum;
-                        allData[i].delta = allData[i].rateNum - prev;
-                        allData[i].deltaPct = (allData[i].delta / prev) * 100;
-                    }
-                }
-
-                setFilter('90'); // Standard-Ansicht
+                fullData.sort((a, b) => a.dateObj - b.dateObj);
+                applyFilters();
             });
 
-        // 2. Filter-Logik
-        function setFilter(days) {
-            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
-            document.getElementById('date-pickers').classList.remove('show');
-            
-            let filteredData = [];
-            const now = new Date();
+        function setCurrency(curr) {
+            currentCurrency = curr;
+            document.querySelectorAll('.currency-controls button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`curr-${curr}`).classList.add('active');
+            applyFilters();
+        }
 
-            if (days === 'all') {
-                document.getElementById('btn-all').classList.add('active');
-                filteredData = [...allData];
-            } else if (days === 'custom') {
+        function setTimeFilter(days) {
+            currentTimeFilter = days;
+            document.querySelectorAll('.controls:not(.currency-controls) button').forEach(b => b.classList.remove('active'));
+            document.getElementById('date-pickers').classList.remove('show');
+            if (days === 'custom') {
                 document.getElementById('btn-custom').classList.add('active');
                 document.getElementById('date-pickers').classList.add('show');
-                return; // Wartet auf Datumseingabe
             } else {
                 document.getElementById(`btn-${days}`).classList.add('active');
-                const cutoff = new Date();
-                cutoff.setDate(now.getDate() - parseInt(days));
-                filteredData = allData.filter(d => d.dateObj >= cutoff);
+                applyFilters();
+            }
+        }
+
+        function toggleCustomDate() { setTimeFilter('custom'); }
+
+        function applyFilters() {
+            let filtered = fullData.filter(d => d.currency === currentCurrency);
+
+            for(let i = 0; i < filtered.length; i++) {
+                if (i === 0) {
+                    filtered[i].trendPct = 0;
+                } else {
+                    const prev = filtered[i-1].wuRate;
+                    filtered[i].trendPct = ((filtered[i].wuRate - prev) / prev) * 100;
+                }
             }
 
-            renderDashboard(filteredData);
+            if (currentTimeFilter !== 'all' && currentTimeFilter !== 'custom') {
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - parseInt(currentTimeFilter));
+                filtered = filtered.filter(d => d.dateObj >= cutoff);
+            } else if (currentTimeFilter === 'custom') {
+                const start = document.getElementById('date-start').value;
+                const end = document.getElementById('date-end').value;
+                if(start && end) {
+                    const startDate = new Date(start);
+                    const endDate = new Date(end);
+                    endDate.setHours(23, 59, 59);
+                    filtered = filtered.filter(d => d.dateObj >= startDate && d.dateObj <= endDate);
+                } else { return; }
+            }
+
+            renderList(filtered);
+            renderChart(filtered);
         }
 
-        function toggleCustomDate() {
-            setFilter('custom');
-        }
-
-        function applyCustomDate() {
-            const start = document.getElementById('date-start').value;
-            const end = document.getElementById('date-end').value;
-            if(!start || !end) return;
-
-            const startDate = new Date(start);
-            const endDate = new Date(end);
-            endDate.setHours(23, 59, 59);
-
-            const filteredData = allData.filter(d => d.dateObj >= startDate && d.dateObj <= endDate);
-            renderDashboard(filteredData);
-        }
-
-        // 3. UI Zeichnen (Chart + Liste)
-        function renderDashboard(data) {
-            if(data.length === 0) return;
-
-            renderList(data);
-            renderChart(data);
-        }
-
-        // Liste
         function renderList(data) {
             const listDiv = document.getElementById('rate-list');
             listDiv.innerHTML = '';
             
-            // Für die Liste neueste Werte nach oben
-            const reversedData = [...data].reverse();
+            const reversed = [...data].reverse();
 
-            reversedData.forEach(item => {
+            reversed.forEach(item => {
                 const dateStr = item.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute:'2-digit' });
                 
-                let deltaHtml = `<div class="item-delta delta-neutral">• 0.00%</div>`;
-                if (item.deltaPct > 0) {
-                    deltaHtml = `<div class="item-delta delta-up">▲ +${item.deltaPct.toFixed(2)}%</div>`;
-                } else if (item.deltaPct < 0) {
-                    deltaHtml = `<div class="item-delta delta-down">▼ ${item.deltaPct.toFixed(2)}%</div>`;
-                }
+                let trendHtml = `<div class="item-delta delta-neutral">• 0.00%</div>`;
+                if (item.trendPct > 0) trendHtml = `<div class="item-delta delta-up">▲ +${item.trendPct.toFixed(2)}%</div>`;
+                else if (item.trendPct < 0) trendHtml = `<div class="item-delta delta-down">▼ ${item.trendPct.toFixed(2)}%</div>`;
+
+                const advantagePct = ((item.wuRate - item.ibRate) / item.ibRate) * 100;
+                const advantageText = advantagePct >= 0 ? `+${advantagePct.toFixed(1)}% WU-Vorteil` : `${advantagePct.toFixed(1)}% (Schlechter)`;
 
                 const row = document.createElement('div');
                 row.className = 'list-item';
@@ -312,28 +269,30 @@
                 row.innerHTML = `
                     <div class="item-left">
                         <div class="item-date">${dateStr}</div>
-                        <div class="item-rate">${item.rateNum.toFixed(2)} ARS</div>
+                        <div class="item-rate">${item.wuRate.toFixed(2)} ARS</div>
+                        <div class="item-ib">Interbank: ${item.ibRate.toFixed(2)} ARS (${advantageText})</div>
                     </div>
-                    ${deltaHtml}
+                    <div class="item-right">
+                        ${trendHtml}
+                    </div>
                 `;
                 listDiv.appendChild(row);
             });
         }
 
-        // Chart
         function renderChart(data) {
             const ctx = document.getElementById('rateChart').getContext('2d');
             
-            // X-Achse: Zeigt Datum (und Uhrzeit im Tooltip)
             const labels = data.map(d => d.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }));
             const fullDateLabels = data.map(d => d.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
-            const values = data.map(d => d.rateNum);
+            const wuValues = data.map(d => d.wuRate);
+            const ibValues = data.map(d => d.ibRate);
             const ids = data.map(d => d.id);
 
-            // Dynamischer Auto-Zoom für die Y-Achse (Perfektes Skalieren)
-            const minRate = Math.min(...values);
-            const maxRate = Math.max(...values);
-            const padding = (maxRate - minRate) * 0.05 || 2; // 5% Puffer oben und unten
+            const allRates = [...wuValues, ...ibValues];
+            const minRate = Math.min(...allRates);
+            const maxRate = Math.max(...allRates);
+            const padding = (maxRate - minRate) * 0.05 || 2;
 
             if (chartInstance) chartInstance.destroy();
 
@@ -341,69 +300,76 @@
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: 'EUR / ARS',
-                        data: values,
-                        borderColor: '#ffd100', // WU Yellow
-                        borderWidth: 2.5, // Etwas kräftiger
-                        pointBackgroundColor: '#1e293b',
-                        pointBorderColor: '#ffd100',
-                        pointBorderWidth: 2,
-                        pointRadius: 3,
-                        pointHoverRadius: 7, // Größerer Hover-Punkt
-                        fill: false, // Nur die Linie, wie gewünscht
-                        tension: 0.1 // Ganz leichte Kurven-Glättung
-                    }]
+                    datasets: [
+                        {
+                            label: 'Western Union',
+                            data: wuValues,
+                            borderColor: '#ffd100',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#1e293b',
+                            pointBorderColor: '#ffd100',
+                            pointBorderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 7,
+                            fill: false,
+                            tension: 0.1,
+                            order: 1
+                        },
+                        {
+                            label: 'Interbank / Visa',
+                            data: ibValues,
+                            borderColor: 'rgba(255, 255, 255, 0.25)', 
+                            borderWidth: 1.5,
+                            borderDash: [5, 5], 
+                            pointRadius: 0, 
+                            pointHoverRadius: 5,
+                            pointBackgroundColor: '#64748b',
+                            fill: false,
+                            tension: 0.1,
+                            order: 2
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    layout: {
-                        padding: { left: 0, right: 15, top: 15, bottom: 0 } // Sorgt dafür, dass rechts nichts abgeschnitten wird
-                    },
+                    layout: { padding: { left: 0, right: 15, top: 15, bottom: 0 } },
                     interaction: {
                         mode: 'index',
                         intersect: false,
                     },
                     plugins: {
-                        legend: { display: false },
+                        legend: { 
+                            display: true, 
+                            labels: { color: '#94a3b8', usePointStyle: true, boxWidth: 8 } 
+                        },
                         tooltip: {
                             backgroundColor: 'rgba(15, 23, 42, 0.95)',
                             titleColor: '#94a3b8',
-                            bodyColor: '#ffd100',
-                            bodyFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13, weight: 'bold' },
                             borderColor: 'rgba(255,255,255,0.1)',
                             borderWidth: 1,
-                            displayColors: false, // Versteckt das kleine überflüssige Farbquadrat im Tooltip
                             callbacks: {
-                                // Zeigt im Tooltip die genaue Uhrzeit an (hilfreich bei 4x täglichen Updates)
                                 title: function(context) { return fullDateLabels[context[0].dataIndex] + ' Uhr'; },
-                                label: function(context) { return context.parsed.y.toFixed(2) + ' ARS'; }
+                                label: function(context) { 
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' ARS'; 
+                                }
                             }
                         }
                     },
                     scales: {
                         x: { 
+                            type: 'category',
                             grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false }, 
-                            ticks: { 
-                                color: '#94a3b8',
-                                maxTicksLimit: 7, // Zwingt den Graphen, die Beschriftung gleichmäßig auf max. 7 Punkte aufzuteilen
-                                maxRotation: 0, // Hält den Text schön waagerecht
-                                align: 'inner'
-                            } 
+                            ticks: { color: '#94a3b8', maxTicksLimit: 8, maxRotation: 0 } 
                         },
                         y: { 
-                            min: minRate - padding, // Schneidet toten Raum unten ab
-                            max: maxRate + padding, // Schneidet toten Raum oben ab
+                            min: minRate - padding, max: maxRate + padding,
                             grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false }, 
-                            ticks: { 
-                                color: '#94a3b8',
-                                callback: function(value) { return value.toFixed(0); } // Macht die Y-Achse übersichtlich ohne Kommastellen
-                            } 
+                            ticks: { color: '#94a3b8', callback: function(value) { return value.toFixed(0); } } 
                         }
                     },
                     onHover: (event, chartElement) => {
-                        // Highlight-Sync mit der Liste
                         document.querySelectorAll('.list-item').forEach(el => el.classList.remove('highlight'));
                         if (chartElement.length > 0) {
                             const index = chartElement[0].index;
