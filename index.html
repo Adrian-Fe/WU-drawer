@@ -147,8 +147,18 @@
 <body>
 
     <header>
-        <h1>Western Union EUR/ARS</h1>
-        <div class="credits">made by Adrian / for @all</div>
+        <div>
+            <h1>Western Union EUR/ARS</h1>
+            <div class="credits">made by Adrian / for @all</div>
+        </div>
+        
+        <!-- Der kleine Update-Bot -->
+        <div style="text-align: right; background: rgba(255,209,0,0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,209,0,0.3);">
+            <div style="font-size: 0.8rem; color: var(--wu-yellow); font-weight: bold;">🤖 Version: 1.1</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 3px;">
+                Code Update: <span id="html-update-time">lädt...</span>
+            </div>
+        </div>
     </header>
 
     <div class="controls glass-panel">
@@ -181,8 +191,22 @@
         let allData = [];
         let chartInstance = null;
 
-        // 1. Daten laden
-        fetch('rates.csv')
+        // Bot: Fragt bei GitHub nach, wann die index.html zuletzt aktualisiert wurde
+        fetch('https://api.github.com/repos/Adrian-Fe/WU-drawer/commits?path=index.html&page=1&per_page=1')
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const commitDate = new Date(data[0].commit.author.date);
+                    const formattedDate = commitDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('html-update-time').innerText = formattedDate + ' Uhr';
+                }
+            })
+            .catch(() => {
+                document.getElementById('html-update-time').innerText = 'Offline';
+            });
+
+        // 1. Daten laden (Das '?v=...' zwingt den Browser, den Cache zu ignorieren!)
+        fetch('rates.csv?v=' + new Date().getTime())
             .then(res => res.text())
             .then(csv => {
                 const parsed = Papa.parse(csv, { header: true }).data;
@@ -296,7 +320,7 @@
             });
         }
 
-       // Chart
+        // Chart
         function renderChart(data) {
             const ctx = document.getElementById('rateChart').getContext('2d');
             
