@@ -6,6 +6,7 @@ from playwright.sync_api import sync_playwright
 import yfinance as yf
 
 CSV_FILE = "rates.csv"
+CSV_COLUMNS = ["timestamp_utc", "send_currency", "receive_currency", "exchange_rate", "interbank_rate"]
 
 TARGETS = {
     "EUR": "https://www.westernunion.com/de/en/currency-converter/eur-to-ars-rate.html",
@@ -112,14 +113,37 @@ def extract_rates():
         return results
 
 
+def ensure_csv_schema():
+    if not os.path.isfile(CSV_FILE):
+        with open(CSV_FILE, mode="w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(CSV_COLUMNS)
+        return
+
+    with open(CSV_FILE, mode="r", newline="", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+
+    if not rows:
+        with open(CSV_FILE, mode="w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(CSV_COLUMNS)
+        return
+
+    header = rows[0]
+    if "interbank_rate" not in header:
+        rows[0] = header + ["interbank_rate"] if len(header) == 4 else header
+        for row in rows[1:]:
+            if len(row) < len(CSV_COLUMNS):
+                row.extend(["N/A"] * (len(CSV_COLUMNS) - len(row)))
+
+        with open(CSV_FILE, mode="w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows)
+
+
 def record_rates(rates_dict):
+    ensure_csv_schema()
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    file_exists = os.path.isfile(CSV_FILE)
 
     with open(CSV_FILE, mode="a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(["timestamp_utc", "send_currency", "receive_currency", "exchange_rate", "interbank_rate"])
 
         for currency, rates in rates_dict.items():
             wu = rates["wu"] if rates["wu"] else "N/A"
