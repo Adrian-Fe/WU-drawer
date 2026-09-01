@@ -296,13 +296,20 @@
             });
         }
 
-        // Chart
+       // Chart
         function renderChart(data) {
             const ctx = document.getElementById('rateChart').getContext('2d');
             
+            // X-Achse: Zeigt Datum (und Uhrzeit im Tooltip)
             const labels = data.map(d => d.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }));
+            const fullDateLabels = data.map(d => d.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
             const values = data.map(d => d.rateNum);
             const ids = data.map(d => d.id);
+
+            // Dynamischer Auto-Zoom für die Y-Achse (Perfektes Skalieren)
+            const minRate = Math.min(...values);
+            const maxRate = Math.max(...values);
+            const padding = (maxRate - minRate) * 0.05 || 2; // 5% Puffer oben und unten
 
             if (chartInstance) chartInstance.destroy();
 
@@ -314,18 +321,22 @@
                         label: 'EUR / ARS',
                         data: values,
                         borderColor: '#ffd100', // WU Yellow
-                        borderWidth: 2,
+                        borderWidth: 2.5, // Etwas kräftiger
                         pointBackgroundColor: '#1e293b',
                         pointBorderColor: '#ffd100',
+                        pointBorderWidth: 2,
                         pointRadius: 3,
-                        pointHoverRadius: 6,
-                        fill: false,
-                        tension: 0.1 // Leichte Kurve
+                        pointHoverRadius: 7, // Größerer Hover-Punkt
+                        fill: false, // Nur die Linie, wie gewünscht
+                        tension: 0.1 // Ganz leichte Kurven-Glättung
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: { left: 0, right: 15, top: 15, bottom: 0 } // Sorgt dafür, dass rechts nichts abgeschnitten wird
+                    },
                     interaction: {
                         mode: 'index',
                         intersect: false,
@@ -333,27 +344,44 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
                             titleColor: '#94a3b8',
                             bodyColor: '#ffd100',
                             bodyFont: { size: 14, weight: 'bold' },
                             borderColor: 'rgba(255,255,255,0.1)',
                             borderWidth: 1,
+                            displayColors: false, // Versteckt das kleine überflüssige Farbquadrat im Tooltip
                             callbacks: {
+                                // Zeigt im Tooltip die genaue Uhrzeit an (hilfreich bei 4x täglichen Updates)
+                                title: function(context) { return fullDateLabels[context[0].dataIndex] + ' Uhr'; },
                                 label: function(context) { return context.parsed.y.toFixed(2) + ' ARS'; }
                             }
                         }
                     },
                     scales: {
-                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                        x: { 
+                            grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false }, 
+                            ticks: { 
+                                color: '#94a3b8',
+                                maxTicksLimit: 7, // Zwingt den Graphen, die Beschriftung gleichmäßig auf max. 7 Punkte aufzuteilen
+                                maxRotation: 0, // Hält den Text schön waagerecht
+                                align: 'inner'
+                            } 
+                        },
+                        y: { 
+                            min: minRate - padding, // Schneidet toten Raum unten ab
+                            max: maxRate + padding, // Schneidet toten Raum oben ab
+                            grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false }, 
+                            ticks: { 
+                                color: '#94a3b8',
+                                callback: function(value) { return value.toFixed(0); } // Macht die Y-Achse übersichtlich ohne Kommastellen
+                            } 
+                        }
                     },
                     onHover: (event, chartElement) => {
-                        // Alle Highlights entfernen
+                        // Highlight-Sync mit der Liste
                         document.querySelectorAll('.list-item').forEach(el => el.classList.remove('highlight'));
-                        
                         if (chartElement.length > 0) {
-                            // Element im Chart wurde gehovert -> In der Liste markieren
                             const index = chartElement[0].index;
                             const targetId = `list-${ids[index]}`;
                             const listEl = document.getElementById(targetId);
