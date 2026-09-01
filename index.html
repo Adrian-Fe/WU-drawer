@@ -1,44 +1,372 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WU EUR/ARS Tracker</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <style>
-    body { font-family: -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; }
-    .card { background: #1e293b; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-    h1 { font-size: 1.2rem; color: #94a3b8; }
-    .latest { font-size: 2.2rem; font-weight: bold; color: #38bdf8; margin: 8px 0; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WU EUR/ARS Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --wu-yellow: #ffd100;
+            --bg-grad-1: #1e293b;
+            --bg-grad-2: #020617;
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --green: #10b981;
+            --red: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-grad-1) 0%, var(--bg-grad-2) 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Container */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+        .credits { font-size: 0.85rem; color: var(--text-muted); opacity: 0.8; }
+
+        /* Controls (Menu) */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--glass-border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        button:hover { background: rgba(255, 255, 255, 0.08); color: var(--text-main); }
+        button.active { border-color: var(--wu-yellow); color: var(--wu-yellow); }
+
+        .date-picker-group {
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        .date-picker-group.show { display: flex; }
+        input[type="date"] {
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+            padding: 7px;
+            border-radius: 6px;
+            color-scheme: dark;
+        }
+
+        /* Main Layout */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 850px) {
+            .dashboard { grid-template-columns: 1fr; }
+            .list-container { order: 2; /* Liste unter den Chart auf Handys */ }
+            .chart-container { order: 1; }
+        }
+
+        /* List Styles */
+        .list-container {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .list-container::-webkit-scrollbar { width: 6px; }
+        .list-container::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
+
+        .list-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+            border-radius: 8px;
+            margin-bottom: 4px;
+        }
+        
+        .list-item:last-child { border-bottom: none; }
+        .list-item.highlight { background: rgba(255, 209, 0, 0.15); border: 1px solid rgba(255, 209, 0, 0.3); }
+
+        .item-left { display: flex; flex-direction: column; gap: 4px; }
+        .item-date { font-size: 0.85rem; color: var(--text-muted); }
+        .item-rate { font-size: 1.1rem; font-weight: 600; }
+        
+        .item-delta { font-size: 0.85rem; font-weight: 500; text-align: right; }
+        .delta-up { color: var(--green); }
+        .delta-down { color: var(--red); }
+        .delta-neutral { color: var(--text-muted); }
+
+        /* Chart */
+        .chart-container {
+            position: relative;
+            height: 500px;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Western Union EUR / ARS</h1>
-    <div class="latest" id="rate">Lade...</div>
-    <canvas id="chart"></canvas>
-  </div>
 
-  <script>
-    fetch('rates.csv')
-      .then(res => res.text())
-      .then(csv => {
-        const data = Papa.parse(csv, { header: true }).data.filter(r => r.exchange_rate && r.exchange_rate !== 'N/A');
-        const labels = data.map(r => r.timestamp_utc.slice(5, 16));
-        const values = data.map(r => parseFloat(r.exchange_rate));
+    <header>
+        <h1>Western Union EUR/ARS</h1>
+        <div class="credits">made by Adrian / for @all</div>
+    </header>
+
+    <div class="controls glass-panel">
+        <button onclick="setFilter('7')" id="btn-7">7 Tage</button>
+        <button onclick="setFilter('30')" id="btn-30">30 Tage</button>
+        <button onclick="setFilter('90')" id="btn-90" class="active">90 Tage</button>
+        <button onclick="setFilter('all')" id="btn-all">Alle Daten</button>
+        <button onclick="toggleCustomDate()" id="btn-custom">Zeitraum...</button>
         
-        document.getElementById('rate').innerText = values[values.length - 1].toFixed(2) + ' ARS';
+        <div class="date-picker-group" id="date-pickers">
+            <input type="date" id="date-start" onchange="applyCustomDate()">
+            <span style="color:var(--text-muted)">bis</span>
+            <input type="date" id="date-end" onchange="applyCustomDate()">
+        </div>
+    </div>
 
-        new Chart(document.getElementById('chart'), {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{ label: 'EUR / ARS', data: values, borderColor: '#38bdf8', tension: 0.2 }]
-          },
-          options: { scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
-        });
-      });
-  </script>
+    <div class="dashboard">
+        <!-- Linke Seite: Liste -->
+        <div class="list-container glass-panel" id="rate-list">
+            <!-- Wird per JS gefüllt -->
+        </div>
+
+        <!-- Rechte Seite: Graph -->
+        <div class="chart-container glass-panel">
+            <canvas id="rateChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let chartInstance = null;
+
+        // 1. Daten laden
+        fetch('rates.csv')
+            .then(res => res.text())
+            .then(csv => {
+                const parsed = Papa.parse(csv, { header: true }).data;
+                // Nur gültige Datenreihen behalten
+                allData = parsed.filter(r => r.exchange_rate && r.exchange_rate !== 'N/A' && r.timestamp_utc);
+                
+                // Datumsobjekte erzeugen und Kurs als Zahl speichern
+                allData.forEach(r => {
+                    r.dateObj = new Date(r.timestamp_utc.replace(" UTC", "Z"));
+                    r.rateNum = parseFloat(r.exchange_rate);
+                    r.id = r.timestamp_utc.replace(/[^a-zA-Z0-9]/g, ""); // ID für Hover-Sync
+                });
+
+                // Chronologisch sortieren (alt -> neu)
+                allData.sort((a, b) => a.dateObj - b.dateObj);
+
+                // Deltas berechnen
+                for(let i = 0; i < allData.length; i++) {
+                    if (i === 0) {
+                        allData[i].delta = 0;
+                        allData[i].deltaPct = 0;
+                    } else {
+                        const prev = allData[i-1].rateNum;
+                        allData[i].delta = allData[i].rateNum - prev;
+                        allData[i].deltaPct = (allData[i].delta / prev) * 100;
+                    }
+                }
+
+                setFilter('90'); // Standard-Ansicht
+            });
+
+        // 2. Filter-Logik
+        function setFilter(days) {
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            document.getElementById('date-pickers').classList.remove('show');
+            
+            let filteredData = [];
+            const now = new Date();
+
+            if (days === 'all') {
+                document.getElementById('btn-all').classList.add('active');
+                filteredData = [...allData];
+            } else if (days === 'custom') {
+                document.getElementById('btn-custom').classList.add('active');
+                document.getElementById('date-pickers').classList.add('show');
+                return; // Wartet auf Datumseingabe
+            } else {
+                document.getElementById(`btn-${days}`).classList.add('active');
+                const cutoff = new Date();
+                cutoff.setDate(now.getDate() - parseInt(days));
+                filteredData = allData.filter(d => d.dateObj >= cutoff);
+            }
+
+            renderDashboard(filteredData);
+        }
+
+        function toggleCustomDate() {
+            setFilter('custom');
+        }
+
+        function applyCustomDate() {
+            const start = document.getElementById('date-start').value;
+            const end = document.getElementById('date-end').value;
+            if(!start || !end) return;
+
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            endDate.setHours(23, 59, 59);
+
+            const filteredData = allData.filter(d => d.dateObj >= startDate && d.dateObj <= endDate);
+            renderDashboard(filteredData);
+        }
+
+        // 3. UI Zeichnen (Chart + Liste)
+        function renderDashboard(data) {
+            if(data.length === 0) return;
+
+            renderList(data);
+            renderChart(data);
+        }
+
+        // Liste
+        function renderList(data) {
+            const listDiv = document.getElementById('rate-list');
+            listDiv.innerHTML = '';
+            
+            // Für die Liste neueste Werte nach oben
+            const reversedData = [...data].reverse();
+
+            reversedData.forEach(item => {
+                const dateStr = item.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute:'2-digit' });
+                
+                let deltaHtml = `<div class="item-delta delta-neutral">• 0.00%</div>`;
+                if (item.deltaPct > 0) {
+                    deltaHtml = `<div class="item-delta delta-up">▲ +${item.deltaPct.toFixed(2)}%</div>`;
+                } else if (item.deltaPct < 0) {
+                    deltaHtml = `<div class="item-delta delta-down">▼ ${item.deltaPct.toFixed(2)}%</div>`;
+                }
+
+                const row = document.createElement('div');
+                row.className = 'list-item';
+                row.id = `list-${item.id}`;
+                row.innerHTML = `
+                    <div class="item-left">
+                        <div class="item-date">${dateStr}</div>
+                        <div class="item-rate">${item.rateNum.toFixed(2)} ARS</div>
+                    </div>
+                    ${deltaHtml}
+                `;
+                listDiv.appendChild(row);
+            });
+        }
+
+        // Chart
+        function renderChart(data) {
+            const ctx = document.getElementById('rateChart').getContext('2d');
+            
+            const labels = data.map(d => d.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }));
+            const values = data.map(d => d.rateNum);
+            const ids = data.map(d => d.id);
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'EUR / ARS',
+                        data: values,
+                        borderColor: '#ffd100', // WU Yellow
+                        borderWidth: 2,
+                        pointBackgroundColor: '#1e293b',
+                        pointBorderColor: '#ffd100',
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        fill: false,
+                        tension: 0.1 // Leichte Kurve
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#94a3b8',
+                            bodyColor: '#ffd100',
+                            bodyFont: { size: 14, weight: 'bold' },
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) { return context.parsed.y.toFixed(2) + ' ARS'; }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                    },
+                    onHover: (event, chartElement) => {
+                        // Alle Highlights entfernen
+                        document.querySelectorAll('.list-item').forEach(el => el.classList.remove('highlight'));
+                        
+                        if (chartElement.length > 0) {
+                            // Element im Chart wurde gehovert -> In der Liste markieren
+                            const index = chartElement[0].index;
+                            const targetId = `list-${ids[index]}`;
+                            const listEl = document.getElementById(targetId);
+                            
+                            if (listEl) {
+                                listEl.classList.add('highlight');
+                                listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
 </body>
 </html>
