@@ -171,14 +171,12 @@
             .then(res => res.text())
             .then(csv => {
                 const parsed = Papa.parse(csv, { header: true }).data;
-                
+
                 fullData = parsed.filter(r => r.exchange_rate && r.exchange_rate !== 'N/A' && r.timestamp_utc).map(r => {
-                    // FIX: Ersetzt Leerzeichen mit 'T', damit Safari nicht kaputtgeht
                     const isoDate = r.timestamp_utc.replace(" ", "T").replace(" UTC", "Z");
                     const dateObj = new Date(isoDate);
                     const wuRate = parseFloat(r.exchange_rate);
-                    
-                    let ibRate = r.interbank_rate && r.interbank_rate !== 'N/A' ? parseFloat(r.interbank_rate) : (wuRate / 1.06);
+                    const ibRate = r.interbank_rate && r.interbank_rate !== 'N/A' ? parseFloat(r.interbank_rate) : null;
                     const currency = r.send_currency || 'EUR';
 
                     return {
@@ -216,6 +214,13 @@
 
         function toggleCustomDate() { setTimeFilter('custom'); }
 
+        function getSpreadPct(item) {
+            if (!item || item.ibRate === null || item.ibRate === undefined || item.ibRate === 0) {
+                return null;
+            }
+            return ((item.wuRate - item.ibRate) / item.ibRate) * 100;
+        }
+
         function applyFilters() {
             let filtered = fullData.filter(d => d.currency === currentCurrency);
 
@@ -250,18 +255,18 @@
         function renderList(data) {
             const listDiv = document.getElementById('rate-list');
             listDiv.innerHTML = '';
-            
+
             const reversed = [...data].reverse();
 
             reversed.forEach(item => {
                 const dateStr = item.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute:'2-digit' });
-                
+
                 let trendHtml = `<div class="item-delta delta-neutral">• 0.00%</div>`;
                 if (item.trendPct > 0) trendHtml = `<div class="item-delta delta-up">▲ +${item.trendPct.toFixed(2)}%</div>`;
                 else if (item.trendPct < 0) trendHtml = `<div class="item-delta delta-down">▼ ${item.trendPct.toFixed(2)}%</div>`;
 
-                const advantagePct = ((item.wuRate - item.ibRate) / item.ibRate) * 100;
-                const advantageText = advantagePct >= 0 ? `+${advantagePct.toFixed(1)}% WU-Vorteil` : `${advantagePct.toFixed(1)}% (Schlechter)`;
+                const spreadPct = getSpreadPct(item);
+                const spreadText = spreadPct === null ? 'kein Interbank-Vergleich' : (spreadPct >= 0 ? `+${spreadPct.toFixed(1)}% WU-Aufschlag` : `${spreadPct.toFixed(1)}% unter Interbank`);
 
                 const row = document.createElement('div');
                 row.className = 'list-item';
@@ -270,7 +275,7 @@
                     <div class="item-left">
                         <div class="item-date">${dateStr}</div>
                         <div class="item-rate">${item.wuRate.toFixed(2)} ARS</div>
-                        <div class="item-ib">Interbank: ${item.ibRate.toFixed(2)} ARS (${advantageText})</div>
+                        <div class="item-ib">Interbank: ${item.ibRate === null ? 'nicht verfügbar' : item.ibRate.toFixed(2) + ' ARS'} (${spreadText})</div>
                     </div>
                     <div class="item-right">
                         ${trendHtml}
@@ -282,19 +287,45 @@
 
         function renderChart(data) {
             const ctx = document.getElementById('rateChart').getContext('2d');
-            
+
             const labels = data.map(d => d.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }));
             const fullDateLabels = data.map(d => d.dateObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
             const wuValues = data.map(d => d.wuRate);
-            const ibValues = data.map(d => d.ibRate);
+            const ibValues = data.map(d => d.ibRate === null ? NaN : d.ibRate);
             const ids = data.map(d => d.id);
 
-            const allRates = [...wuValues, ...ibValues];
+            const allRates = [...wuValues, ...ibValues.filter(v => !Number.isNaN(v))];
             const minRate = Math.min(...allRates);
             const maxRate = Math.max(...allRates);
             const padding = (maxRate - minRate) * 0.05 || 2;
 
             if (chartInstance) chartInstance.destroy();
+
+            const verticalLinePlugin = {
+                id: 'verticalLinePlugin',
+                afterDatasetsDraw(chart) {
+                    const active = chart.tooltip && chart.tooltip.dataPoints && chart.tooltip.dataPoints.length ? chart.tooltip.dataPoints[0] : null;
+                    if (!active) return;
+
+                    const xScale = chart.scales.x;
+                    const yScale = chart.scales.y;
+                    if (!xScale || !yScale) return;
+
+                    const xPixel = xScale.getPixelForValue(active.dataIndex);
+                    const yTop = yScale.top;
+                    const yBottom = yScale.bottom;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(xPixel, yTop);
+                    ctx.lineTo(xPixel, yBottom);
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = '#60a5fa';
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            };
 
             chartInstance = new Chart(ctx, {
                 type: 'line',
@@ -318,10 +349,10 @@
                         {
                             label: 'Interbank / Visa',
                             data: ibValues,
-                            borderColor: 'rgba(255, 255, 255, 0.25)', 
+                            borderColor: 'rgba(255, 255, 255, 0.25)',
                             borderWidth: 1.5,
-                            borderDash: [5, 5], 
-                            pointRadius: 0, 
+                            borderDash: [5, 5],
+                            pointRadius: 0,
                             pointHoverRadius: 5,
                             pointBackgroundColor: '#64748b',
                             fill: false,
@@ -339,9 +370,9 @@
                         intersect: false,
                     },
                     plugins: {
-                        legend: { 
-                            display: true, 
-                            labels: { color: '#94a3b8', usePointStyle: true, boxWidth: 8 } 
+                        legend: {
+                            display: true,
+                            labels: { color: '#94a3b8', usePointStyle: true, boxWidth: 8 }
                         },
                         tooltip: {
                             backgroundColor: 'rgba(15, 23, 42, 0.95)',
@@ -351,22 +382,28 @@
                             borderWidth: 1,
                             callbacks: {
                                 title: function(context) { return fullDateLabels[context[0].dataIndex] + ' Uhr'; },
-                                label: function(context) { 
-                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' ARS'; 
+                                label: function(context) {
+                                    const item = data[context.dataIndex];
+                                    const spreadPct = item ? getSpreadPct(item) : null;
+                                    const valueText = context.parsed.y.toFixed(2) + ' ARS';
+                                    if (spreadPct !== null) {
+                                        return context.dataset.label + ': ' + valueText + ' | Spread: ' + (spreadPct >= 0 ? '+' : '') + spreadPct.toFixed(2) + '%';
+                                    }
+                                    return context.dataset.label + ': ' + valueText;
                                 }
                             }
                         }
                     },
                     scales: {
-                        x: { 
+                        x: {
                             type: 'category',
-                            grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false }, 
-                            ticks: { color: '#94a3b8', maxTicksLimit: 8, maxRotation: 0 } 
+                            grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false },
+                            ticks: { color: '#94a3b8', maxTicksLimit: 8, maxRotation: 0 }
                         },
-                        y: { 
+                        y: {
                             min: minRate - padding, max: maxRate + padding,
-                            grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false }, 
-                            ticks: { color: '#94a3b8', callback: function(value) { return value.toFixed(0); } } 
+                            grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                            ticks: { color: '#94a3b8', callback: function(value) { return value.toFixed(0); } }
                         }
                     },
                     onHover: (event, chartElement) => {
@@ -375,14 +412,14 @@
                             const index = chartElement[0].index;
                             const targetId = `list-${ids[index]}`;
                             const listEl = document.getElementById(targetId);
-                            
+
                             if (listEl) {
                                 listEl.classList.add('highlight');
-                                listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                             }
                         }
                     }
-                }
+                },
+                plugins: [verticalLinePlugin]
             });
         }
     </script>

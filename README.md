@@ -7,7 +7,7 @@ This repository tracks the live EUR-to-ARS exchange rate from Western Union usin
 - Visits the live Western Union EUR to ARS converter page
 - Extracts the current FX value
 - Appends the timestamped rate to `rates.csv`
-- Runs every 6 hours via GitHub Actions
+- Runs every 2 hours via GitHub Actions
 - Can also be triggered manually from the Actions tab
 
 ## Files
@@ -32,10 +32,10 @@ python scraper.py
 The workflow is configured with:
 
 ```yaml
-cron: '0 */6 * * *'
+cron: '0 */2 * * *'
 ```
 
-This runs at 00:00, 06:00, 12:00, and 18:00 UTC.
+This runs every 2 hours: 00:00, 02:00, 04:00, 06:00, 08:00, 10:00, 12:00, 14:00, 16:00, 18:00, 20:00, and 22:00 UTC.
 
 What happens in GitHub Actions
 
