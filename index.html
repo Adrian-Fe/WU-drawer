@@ -93,7 +93,13 @@
         .item-rate { font-size: 1.1rem; font-weight: 600; }
         .item-ib { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
         
-        .item-right { text-align: right; }
+        .item-spread { 
+            font-size: 1.6rem; 
+            font-weight: 700; 
+            text-align: right; 
+            color: var(--wu-yellow);
+            min-width: 80px;
+        }
         .item-delta { font-size: 0.85rem; font-weight: 500; }
         .delta-up { color: var(--green); }
         .delta-down { color: var(--red); }
@@ -266,7 +272,7 @@
                 else if (item.trendPct < 0) trendHtml = `<div class="item-delta delta-down">▼ ${item.trendPct.toFixed(2)}%</div>`;
 
                 const spreadPct = getSpreadPct(item);
-                const spreadText = spreadPct === null ? 'kein Interbank-Vergleich' : (spreadPct >= 0 ? `+${spreadPct.toFixed(1)}% WU-Aufschlag` : `${spreadPct.toFixed(1)}% unter Interbank`);
+                const spreadDisplay = spreadPct === null ? 'N/A' : (spreadPct >= 0 ? `+${spreadPct.toFixed(1)}%` : `${spreadPct.toFixed(1)}%`);
 
                 const row = document.createElement('div');
                 row.className = 'list-item';
@@ -274,11 +280,11 @@
                 row.innerHTML = `
                     <div class="item-left">
                         <div class="item-date">${dateStr}</div>
-                        <div class="item-rate">${item.wuRate.toFixed(2)} ARS</div>
-                        <div class="item-ib">Interbank: ${item.ibRate === null ? 'nicht verfügbar' : item.ibRate.toFixed(2) + ' ARS'} (${spreadText})</div>
+                        <div class="item-rate">WU: ${item.wuRate.toFixed(2)} ARS</div>
+                        <div class="item-ib">Interbank: ${item.ibRate === null ? 'nicht verfügbar' : item.ibRate.toFixed(2) + ' ARS'}</div>
                     </div>
-                    <div class="item-right">
-                        ${trendHtml}
+                    <div class="item-spread">
+                        ${spreadDisplay}
                     </div>
                 `;
                 listDiv.appendChild(row);
