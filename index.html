@@ -93,13 +93,7 @@
         .item-rate { font-size: 1.1rem; font-weight: 600; }
         .item-ib { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
         
-        .item-spread { 
-            font-size: 1.6rem; 
-            font-weight: 700; 
-            text-align: right; 
-            color: var(--wu-yellow);
-            min-width: 80px;
-        }
+        .item-right { text-align: right; }
         .item-delta { font-size: 0.85rem; font-weight: 500; }
         .delta-up { color: var(--green); }
         .delta-down { color: var(--red); }
@@ -271,9 +265,6 @@
                 if (item.trendPct > 0) trendHtml = `<div class="item-delta delta-up">▲ +${item.trendPct.toFixed(2)}%</div>`;
                 else if (item.trendPct < 0) trendHtml = `<div class="item-delta delta-down">▼ ${item.trendPct.toFixed(2)}%</div>`;
 
-                const spreadPct = getSpreadPct(item);
-                const spreadDisplay = spreadPct === null ? 'N/A' : (spreadPct >= 0 ? `+${spreadPct.toFixed(1)}%` : `${spreadPct.toFixed(1)}%`);
-
                 const row = document.createElement('div');
                 row.className = 'list-item';
                 row.id = `list-${item.id}`;
@@ -283,8 +274,8 @@
                         <div class="item-rate">WU: ${item.wuRate.toFixed(2)} ARS</div>
                         <div class="item-ib">Interbank: ${item.ibRate === null ? 'nicht verfügbar' : item.ibRate.toFixed(2) + ' ARS'}</div>
                     </div>
-                    <div class="item-spread">
-                        ${spreadDisplay}
+                    <div class="item-right">
+                        ${trendHtml}
                     </div>
                 `;
                 listDiv.appendChild(row);
@@ -384,18 +375,21 @@
                             backgroundColor: 'rgba(15, 23, 42, 0.95)',
                             titleColor: '#94a3b8',
                             bodyFont: { size: 13, weight: 'bold' },
+                            footerFont: { size: 13, weight: 'bold' },
+                            footerColor: '#ffd100',
                             borderColor: 'rgba(255,255,255,0.1)',
                             borderWidth: 1,
                             callbacks: {
                                 title: function(context) { return fullDateLabels[context[0].dataIndex] + ' Uhr'; },
                                 label: function(context) {
-                                    const item = data[context.dataIndex];
-                                    const spreadPct = item ? getSpreadPct(item) : null;
                                     const valueText = context.parsed.y.toFixed(2) + ' ARS';
-                                    if (spreadPct !== null) {
-                                        return context.dataset.label + ': ' + valueText + ' | Spread: ' + (spreadPct >= 0 ? '+' : '') + spreadPct.toFixed(2) + '%';
-                                    }
                                     return context.dataset.label + ': ' + valueText;
+                                },
+                                footer: function(context) {
+                                    const item = data[context[0].dataIndex];
+                                    const spreadPct = item ? getSpreadPct(item) : null;
+                                    if (spreadPct === null) return 'Spread: nicht verfügbar';
+                                    return 'Spread: ' + (spreadPct >= 0 ? '+' : '') + spreadPct.toFixed(2) + '%';
                                 }
                             }
                         }
