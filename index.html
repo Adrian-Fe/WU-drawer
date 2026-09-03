@@ -92,6 +92,7 @@
         .item-date { font-size: 0.85rem; color: var(--text-muted); }
         .item-rate { font-size: 1.1rem; font-weight: 600; }
         .item-ib { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+        .item-spread { font-size: 0.75rem; color: var(--wu-yellow); font-weight: 600; margin-top: 1px; }
         
         .item-right { text-align: right; }
         .item-delta { font-size: 0.85rem; font-weight: 500; }
@@ -265,6 +266,11 @@
                 if (item.trendPct > 0) trendHtml = `<div class="item-delta delta-up">▲ +${item.trendPct.toFixed(2)}%</div>`;
                 else if (item.trendPct < 0) trendHtml = `<div class="item-delta delta-down">▼ ${item.trendPct.toFixed(2)}%</div>`;
 
+                const spreadPct = getSpreadPct(item);
+                const spreadHtml = spreadPct === null
+                    ? 'nicht verfügbar'
+                    : `${spreadPct >= 0 ? '+' : ''}${spreadPct.toFixed(2)}%`;
+
                 const row = document.createElement('div');
                 row.className = 'list-item';
                 row.id = `list-${item.id}`;
@@ -273,6 +279,7 @@
                         <div class="item-date">${dateStr}</div>
                         <div class="item-rate">WU: ${item.wuRate.toFixed(2)} ARS</div>
                         <div class="item-ib">Interbank: ${item.ibRate === null ? 'nicht verfügbar' : item.ibRate.toFixed(2) + ' ARS'}</div>
+                        <div class="item-spread">Spread: ${spreadHtml}</div>
                     </div>
                     <div class="item-right">
                         ${trendHtml}
