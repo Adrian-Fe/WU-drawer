@@ -1,6 +1,9 @@
 name: Track Western Union EUR/ARS Rate
 
 on:
+  push:
+    paths:
+      - '.github/workflows/track.yml'
   schedule:
     # Temporary test schedule: runs every 5 minutes (GitHub minimum interval).
     - cron: '*/5 * * * *'
