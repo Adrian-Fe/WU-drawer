@@ -104,13 +104,11 @@
             color: var(--wu-yellow);
             font-weight: 600;
             margin-top: 1px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
-        .spread-delta-val {
+        .spread-change {
             font-size: 0.75rem;
             font-weight: 600;
+            margin-top: 1px;
         }
 
         .chart-container { 
@@ -291,12 +289,12 @@
                     ? 'nicht verfügbar'
                     : `${spreadPct >= 0 ? '+' : ''}${spreadPct.toFixed(2)}%`;
                 const spreadDelta = item.spreadDeltaPct;
-                let deltaInline = '';
-                if (spreadDelta !== null) {
-                    const deltaClass = spreadDelta > 0 ? 'delta-up' : spreadDelta < 0 ? 'delta-down' : 'delta-neutral';
-                    const sign = spreadDelta > 0 ? '+' : '';
-                    deltaInline = `<span class="spread-delta-val ${deltaClass}">(${sign}${spreadDelta.toFixed(2)})</span>`;
-                }
+                const spreadChangeClass = spreadDelta === null
+                    ? 'delta-neutral'
+                    : spreadDelta > 0 ? 'delta-up' : spreadDelta < 0 ? 'delta-down' : 'delta-neutral';
+                const spreadChangeHtml = spreadDelta === null
+                    ? 'nicht verfügbar'
+                    : `${spreadDelta >= 0 ? '+' : ''}${spreadDelta.toFixed(2)} pp`;
 
                 const row = document.createElement('div');
                 row.className = 'list-item';
@@ -306,10 +304,8 @@
                         <div class="item-date">${dateStr}</div>
                         <div class="item-rate">WU: ${item.wuRate.toFixed(2)} ARS</div>
                         <div class="item-ib">Interbank: ${item.ibRate === null ? 'nicht verfügbar' : item.ibRate.toFixed(2) + ' ARS'}</div>
-                        <div class="item-spread">
-                            <span>Spread: ${spreadHtml}</span>
-                            ${deltaInline}
-                        </div>
+                        <div class="item-spread">Spread: ${spreadHtml}</div>
+                        <div class="spread-change ${spreadChangeClass}">Spread Change: ${spreadChangeHtml}</div>
                     </div>
                     <div class="item-right">
                         ${trendHtml}
