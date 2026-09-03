@@ -99,7 +99,19 @@
         .delta-up { color: var(--green); }
         .delta-down { color: var(--red); }
         .delta-neutral { color: var(--text-muted); }
-        .item-spread-delta { font-size: 0.75rem; margin-top: 5px; white-space: nowrap; }
+        .item-spread {
+            font-size: 0.75rem;
+            color: var(--wu-yellow);
+            font-weight: 600;
+            margin-top: 1px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .spread-delta-val {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
 
         .chart-container { 
             position: relative; 
@@ -279,9 +291,12 @@
                     ? 'nicht verfügbar'
                     : `${spreadPct >= 0 ? '+' : ''}${spreadPct.toFixed(2)}%`;
                 const spreadDelta = item.spreadDeltaPct;
-                const spreadDeltaHtml = spreadDelta === null
-                    ? `<div class="item-spread-delta delta-neutral">■ Δ Spread: nicht verfügbar</div>`
-                    : `<div class="item-spread-delta ${spreadDelta > 0 ? 'delta-up' : spreadDelta < 0 ? 'delta-down' : 'delta-neutral'}">■ Δ Spread: ${spreadDelta >= 0 ? '+' : ''}${spreadDelta.toFixed(2)} pp</div>`;
+                let deltaInline = '';
+                if (spreadDelta !== null) {
+                    const deltaClass = spreadDelta > 0 ? 'delta-up' : spreadDelta < 0 ? 'delta-down' : 'delta-neutral';
+                    const sign = spreadDelta > 0 ? '+' : '';
+                    deltaInline = `<span class="spread-delta-val ${deltaClass}">(${sign}${spreadDelta.toFixed(2)})</span>`;
+                }
 
                 const row = document.createElement('div');
                 row.className = 'list-item';
@@ -291,11 +306,13 @@
                         <div class="item-date">${dateStr}</div>
                         <div class="item-rate">WU: ${item.wuRate.toFixed(2)} ARS</div>
                         <div class="item-ib">Interbank: ${item.ibRate === null ? 'nicht verfügbar' : item.ibRate.toFixed(2) + ' ARS'}</div>
-                        <div class="item-spread">Spread: ${spreadHtml}</div>
+                        <div class="item-spread">
+                            <span>Spread: ${spreadHtml}</span>
+                            ${deltaInline}
+                        </div>
                     </div>
                     <div class="item-right">
                         ${trendHtml}
-                        ${spreadDeltaHtml}
                     </div>
                 `;
                 listDiv.appendChild(row);
