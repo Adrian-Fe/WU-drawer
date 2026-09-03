@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>WU Multi-Currency Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -179,7 +182,14 @@
             }).catch(() => document.getElementById('html-update-time').innerText = 'Offline');
 
         // CSV Fetch
-        fetch('rates.csv?v=' + new Date().getTime())
+        const rawRatesUrl = 'https://raw.githubusercontent.com/Adrian-Fe/WU-drawer/main/rates.csv?t=' + Date.now();
+        fetch(rawRatesUrl, {
+            cache: 'no-store',
+            headers: {
+                'Pragma': 'no-cache',
+                'Cache-Control': 'no-cache'
+            }
+        })
             .then(res => res.text())
             .then(csv => {
                 const parsed = Papa.parse(csv, { header: true }).data;
