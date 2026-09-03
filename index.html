@@ -99,6 +99,7 @@
         .delta-up { color: var(--green); }
         .delta-down { color: var(--red); }
         .delta-neutral { color: var(--text-muted); }
+        .item-spread-delta { font-size: 0.75rem; margin-top: 5px; white-space: nowrap; }
 
         .chart-container { 
             position: relative; 
@@ -228,9 +229,16 @@
             for(let i = 0; i < filtered.length; i++) {
                 if (i === 0) {
                     filtered[i].trendPct = 0;
+                    filtered[i].spreadDeltaPct = null;
                 } else {
                     const prev = filtered[i-1].wuRate;
                     filtered[i].trendPct = ((filtered[i].wuRate - prev) / prev) * 100;
+
+                    const currentSpread = getSpreadPct(filtered[i]);
+                    const previousSpread = getSpreadPct(filtered[i-1]);
+                    filtered[i].spreadDeltaPct = currentSpread === null || previousSpread === null
+                        ? null
+                        : currentSpread - previousSpread;
                 }
             }
 
@@ -270,6 +278,10 @@
                 const spreadHtml = spreadPct === null
                     ? 'nicht verfügbar'
                     : `${spreadPct >= 0 ? '+' : ''}${spreadPct.toFixed(2)}%`;
+                const spreadDelta = item.spreadDeltaPct;
+                const spreadDeltaHtml = spreadDelta === null
+                    ? `<div class="item-spread-delta delta-neutral">■ Δ Spread: nicht verfügbar</div>`
+                    : `<div class="item-spread-delta ${spreadDelta > 0 ? 'delta-up' : spreadDelta < 0 ? 'delta-down' : 'delta-neutral'}">■ Δ Spread: ${spreadDelta >= 0 ? '+' : ''}${spreadDelta.toFixed(2)} pp</div>`;
 
                 const row = document.createElement('div');
                 row.className = 'list-item';
@@ -283,6 +295,7 @@
                     </div>
                     <div class="item-right">
                         ${trendHtml}
+                        ${spreadDeltaHtml}
                     </div>
                 `;
                 listDiv.appendChild(row);
