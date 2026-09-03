@@ -2,8 +2,8 @@ name: Track Western Union EUR/ARS Rate
 
 on:
   schedule:
-    # Temporary test schedule: runs every 2 minutes.
-    - cron: '*/2 * * * *'
+    # Temporary test schedule: runs every 5 minutes (GitHub minimum interval).
+    - cron: '*/5 * * * *'
   workflow_dispatch: # Allows manual trigger from Actions tab
 
 permissions:
