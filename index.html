@@ -184,13 +184,12 @@
         // CSV Fetch
         const rawRatesUrl = 'https://raw.githubusercontent.com/Adrian-Fe/WU-drawer/main/rates.csv?t=' + Date.now();
         fetch(rawRatesUrl, {
-            cache: 'no-store',
-            headers: {
-                'Pragma': 'no-cache',
-                'Cache-Control': 'no-cache'
-            }
+            cache: 'no-store'
         })
-            .then(res => res.text())
+            .then(res => {
+                if (!res.ok) throw new Error(`CSV konnte nicht geladen werden (${res.status})`);
+                return res.text();
+            })
             .then(csv => {
                 const parsed = Papa.parse(csv, { header: true }).data;
 
@@ -212,6 +211,10 @@
 
                 fullData.sort((a, b) => a.dateObj - b.dateObj);
                 applyFilters();
+            })
+            .catch(error => {
+                document.getElementById('rate-list').innerText = 'Daten konnten nicht geladen werden.';
+                console.error('CSV Fetch Error:', error);
             });
 
         function setCurrency(curr) {
